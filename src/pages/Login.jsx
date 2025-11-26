@@ -50,9 +50,9 @@ export default function Login({ onLogin, onShowRegister }) {
         </div>
         <button onClick={handle}>Entrar</button>
         {error && <div className="login-error">{error}</div>}
-          <button className="link-btn" onClick={onShowRegister}>
-            ¿No tienes cuenta? Regístrate aquí
-          </button>
+        <button className="link-btn" onClick={onShowRegister}>
+          ¿No tienes cuenta? Regístrate aquí
+        </button>
       </section>
     </div>
   );

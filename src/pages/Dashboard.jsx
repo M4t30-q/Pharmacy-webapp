@@ -1,43 +1,66 @@
 export default function Dashboard({ user }) {
-  // Puedes agregar aquí llamadas a APIs o lógica real si tienes backend
   const stats = {
-    productos: 124,
-    ventasHoy: 7,
-    clientesActivos: 15,
+    productos: 111,
+    ventasHoy: 9,
+    clientesActivos: 8,
     alertas: [
-      "Stock bajo: paracetamol",
-      "Pedido pendiente de cobro"
+      "Stock bajo: Paracetamol",
+      "Pedido pendiente de cobro",
+      "Producto cercano a vencer"
     ]
   };
 
+  const cards = [
+    { label: "Productos registrados", value: stats.productos },
+    { label: "Ventas del día", value: stats.ventasHoy },
+    { label: "Clientes activos", value: stats.clientesActivos }
+  ];
+
+  const ventasSemana = [4, 7, 5, 9, 6, 10, 3];
+
   return (
     <section className="dashboard">
-      <h1>Bienvenido, {user?.nombre || "usuario"}</h1>
-      <div className="dashboard-row">
-        <div className="card">
-          <div className="card-title">Productos en inventario</div>
-          <div className="card-value">{stats.productos}</div>
-        </div>
-        <div className="card">
-          <div className="card-title">Ventas hoy</div>
-          <div className="card-value">{stats.ventasHoy}</div>
-        </div>
-        <div className="card">
-          <div className="card-title">Clientes activos</div>
-          <div className="card-value">{stats.clientesActivos}</div>
-        </div>
+
+      <header className="dash-header">
+        <h1>Panel de Control</h1>
+        <p className="dash-subtitle">Resumen general del sistema</p>
+      </header>
+
+      {/* Tarjetas */}
+      <div className="cards-container">
+        {cards.map((c, i) => (
+          <div className="metric-card" key={i}>
+            <div className="metric-bar"></div>
+            <div className="metric-content">
+              <span className="metric-label">{c.label}</span>
+              <span className="metric-value">{c.value}</span>
+            </div>
+          </div>
+        ))}
       </div>
-      <div className="card dashboard-alertas">
-        <h2>Alertas recientes</h2>
-        <ul>
-          {stats.alertas.length === 0 && (
-            <li>No hay alertas actuales.</li>
-          )}
-          {stats.alertas.map((alerta, idx) => (
-            <li key={idx}>{alerta}</li>
-          ))}
-        </ul>
+
+      {/* Mini Gráfico */}
+      <div className="sparkline">
+        {ventasSemana.map((v, idx) => (
+          <div
+            key={idx}
+            className="spark-bar"
+            style={{ height: v * 10 }}
+          ></div>
+        ))}
       </div>
+
+      {/* Alertas */}
+      <div className="alert-box">
+        <h2 className="alert-title">Alertas del sistema</h2>
+        {stats.alertas.map((a, idx) => (
+          <div className="alert-item" key={idx}>
+            <span className="alert-dot"></span>
+            {a}
+          </div>
+        ))}
+      </div>
+
     </section>
   );
 }

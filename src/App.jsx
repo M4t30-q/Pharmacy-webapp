@@ -12,15 +12,21 @@ export default function App() {
     const saved = localStorage.getItem("user");
     return saved ? JSON.parse(saved) : null;
   });
-
   const [showRegister, setShowRegister] = useState(false);
 
   useEffect(() => {
     const users = JSON.parse(localStorage.getItem("users") || "[]");
     setHasUsers(users.length > 0);
+    // Inicializa el tema si es necesario
+    if (!localStorage.getItem("theme")) {
+      localStorage.setItem("theme", "light");
+      document.documentElement.setAttribute("data-theme", "light");
+    } else {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("theme"));
+    }
   }, []);
 
-  // Cuando NO hay usuarios o se elige registro manualmente, mostra Register
+  // Debe mostrar primero register si no hay usuarios
   if (!hasUsers || showRegister) {
     return (
       <Register
@@ -32,7 +38,6 @@ export default function App() {
     );
   }
 
-  // Si hay usuarios, pero no sesión activa, muestra Login con opción de registro
   if (!user) {
     return (
       <Login
@@ -45,7 +50,7 @@ export default function App() {
     );
   }
 
-  // Usuario autenticado: muestra layout y dashboard
+  // Dashboard y Layout siempre reciben la prop user correcta
   return (
     <Layout
       user={user}
