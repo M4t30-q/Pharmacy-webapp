@@ -8,12 +8,13 @@ import { useState } from "react";
 
 export default function Layout({ user, onLogout }) {
   const [page, setPage] = useState("dashboard");
+
   const pages = {
     dashboard: <Dashboard user={user} />,
     inventario: <Inventario user={user} />,
     login: <Login />,
     register: <Register />,
-    ayuda: <Ayuda />,
+    // ayuda: <Ayuda />  ❌ sácalo mientras no exista
   };
 
   return (
@@ -22,7 +23,7 @@ export default function Layout({ user, onLogout }) {
       <main className="main-content">
         <div className="topbar">
           <ThemeToggle />
-          <span className="user-name">{user?.nombre}</span>
+          <span className="user-name">{user?.email}</span>
         </div>
         {pages[page] || <Dashboard user={user} />}
       </main>
