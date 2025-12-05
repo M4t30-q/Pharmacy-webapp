@@ -1,13 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "./layout/Layout";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import Auth from "./pages/Auth";
 
 export default function App() {
-  const [hasUsers, setHasUsers] = useState(() => {
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    return users.length > 0;
-  });
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("user");
     return saved ? JSON.parse(saved) : null;
@@ -38,19 +33,27 @@ export default function App() {
     );
   }
 
+
+  useEffect(() => {
+    // si el usuario cambia, lo guardamos
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    }
+  }, [user]);
+
+  // Si NO hay sesión → mostrar Auth (que maneja login/register)
   if (!user) {
     return (
-      <Login
-        onLogin={u => {
+      <Auth
+        onLoginSuccess={(u) => {
           setUser(u);
-          localStorage.setItem("user", JSON.stringify(u));
         }}
-        onShowRegister={() => setShowRegister(true)}
       />
     );
   }
 
   // Dashboard y Layout siempre reciben la prop user correcta
+  // Si hay sesión → mostrar Dashboard/Layout
   return (
     <Layout
       user={user}

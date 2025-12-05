@@ -1,13 +1,9 @@
 export default function Dashboard({ user }) {
   const stats = {
-    productos: 111,
-    ventasHoy: 9,
-    clientesActivos: 8,
-    alertas: [
-      "Stock bajo: Paracetamol",
-      "Pedido pendiente de cobro",
-      "Producto cercano a vencer"
-    ]
+    productos: 124,
+    ventasHoy: 7,
+    clientesActivos: 15,
+    alertas: ["Stock bajo: paracetamol", "Pedido pendiente de cobro"],
   };
 
   const cards = [
@@ -19,48 +15,108 @@ export default function Dashboard({ user }) {
   const ventasSemana = [4, 7, 5, 9, 6, 10, 3];
 
   return (
-    <section className="dashboard">
+    <section
+      className="
+        w-full h-full
+        px-6 md:px-10 py-10
+        text-white/90
+      "
+    >
+      {/* TITLE */}
+      <h1 className="text-3xl font-semibold tracking-tight mb-8">
+        Bienvenido, {user?.nombre || "usuario"}
+      </h1>
 
-      <header className="dash-header">
-        <h1>Panel de Control</h1>
-        <p className="dash-subtitle">Resumen general del sistema</p>
-      </header>
+      {/* TOP STATS */}
+      <div
+        className="
+          grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3
+          gap-6 mb-10
+        "
+      >
+        {/* CARD 1 */}
+        <div
+          className="
+            backdrop-blur-xl bg-white/5
+            border border-white/10
+            rounded-2xl p-6
+            shadow-lg transition hover:shadow-xl
+          "
+        >
+          <p className="text-sm text-white/70">Productos en inventario</p>
+          <h2 className="text-4xl mt-2 font-semibold">{stats.productos}</h2>
+        </div>
 
-      {/* Tarjetas */}
-      <div className="cards-container">
-        {cards.map((c, i) => (
-          <div className="metric-card" key={i}>
-            <div className="metric-bar"></div>
-            <div className="metric-content">
-              <span className="metric-label">{c.label}</span>
-              <span className="metric-value">{c.value}</span>
-            </div>
-          </div>
-        ))}
+        {/* CARD 2 */}
+        <div
+          className="
+            backdrop-blur-xl bg-white/5
+            border border-white/10
+            rounded-2xl p-6
+            shadow-lg transition hover:shadow-xl
+          "
+        >
+          <p className="text-sm text-white/70">Ventas hoy</p>
+          <h2 className="text-4xl mt-2 font-semibold">{stats.ventasHoy}</h2>
+        </div>
+
+        {/* CARD 3 */}
+        <div
+          className="
+            backdrop-blur-xl bg-white/5
+            border border-white/10
+            rounded-2xl p-6
+            shadow-lg transition hover:shadow-xl
+          "
+        >
+          <p className="text-sm text-white/70">Clientes activos</p>
+          <h2 className="text-4xl mt-2 font-semibold">{stats.clientesActivos}</h2>
+        </div>
       </div>
 
-      {/* Mini Gráfico */}
-      <div className="sparkline">
+      {/* ALERTAS */}
+      <div
+        className="
+          backdrop-blur-xl bg-white/5
+          border border-white/10
+          rounded-2xl p-6
+          shadow-lg mb-6
+        "
+      >
+        <h2 className="text-xl font-medium mb-4 tracking-tight">Alertas recientes</h2>
+
+        <ul className="space-y-2">
+          {stats.alertas.length === 0 && (
+            <li className="text-white/60">No hay alertas actuales.</li>
+          )}
+
+          {stats.alertas.map((alerta, idx) => (
+            <li
+              key={idx}
+              className="
+                p-3 rounded-xl 
+                bg-white/5 border border-white/10
+                hover:bg-white/[0.08]
+                transition
+              "
+            >
+              {alerta}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* OPTIONAL: Mini gráfico de ventas de la semana */}
+      <div className="flex items-end gap-2 h-24 mb-6">
         {ventasSemana.map((v, idx) => (
           <div
             key={idx}
-            className="spark-bar"
-            style={{ height: v * 10 }}
-          ></div>
+            className="bg-white/20 rounded-sm w-3"
+            style={{ height: `${v * 8}px` }}
+            title={`Día ${idx + 1}: ${v}`}
+          />
         ))}
       </div>
-
-      {/* Alertas */}
-      <div className="alert-box">
-        <h2 className="alert-title">Alertas del sistema</h2>
-        {stats.alertas.map((a, idx) => (
-          <div className="alert-item" key={idx}>
-            <span className="alert-dot"></span>
-            {a}
-          </div>
-        ))}
-      </div>
-
     </section>
   );
 }

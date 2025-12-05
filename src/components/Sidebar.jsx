@@ -1,36 +1,138 @@
-import { Home, Boxes, Users, HelpCircle, LogOut } from 'lucide-react';
+import {
+  Home,
+  Boxes,
+  Users,
+  HelpCircle,
+  LogOut,
+  PanelLeftClose,
+  PanelLeft,
+  ShoppingCart,
+  Settings,
+  PackageSearch,
+} from "lucide-react";
 import { useState } from "react";
 
 export default function Sidebar({ role, onNavigate, onLogout }) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <aside className={`sidebar${collapsed ? ' collapsed' : ''}`}>
-      <div className="sidebar-header">
-        <button className="collapse-btn" onClick={() => setCollapsed(c => !c)} aria-label="Colapsar menú">
-          {collapsed ? "☰" : "⮜"}
-        </button>
-        {!collapsed && <h3>Panel</h3>}
-      </div>
-      <nav>
-        <button onClick={() => onNavigate("dashboard")} className="sidebar-item">
-          <Home size={20}/> {!collapsed && "Dashboard"}
-        </button>
-        <button onClick={() => onNavigate("inventario")} className="sidebar-item">
-          <Boxes size={20}/> {!collapsed && "Inventario"}
-        </button>
-        {role === "admin" && (
-          <button onClick={() => onNavigate("usuarios")} className="sidebar-item">
-            <Users size={20}/> {!collapsed && "Usuarios"}
-          </button>
+    <aside
+      className={`
+        h-screen sticky top-0
+        flex flex-col
+        backdrop-blur-xl bg-white/5
+        border-r border-white/10
+        shadow-xl
+        transition-all duration-300
+        ${collapsed ? "w-16" : "w-60"}
+      `}
+    >
+      {/* HEADER */}
+      <div className="flex items-center justify-between p-5 border-b border-white/10">
+        {!collapsed && (
+          <h3 className="text-lg font-semibold tracking-tight text-white/90">
+            Panel
+          </h3>
         )}
-        <button onClick={() => onNavigate("ayuda")} className="sidebar-item">
-          <HelpCircle size={20}/> {!collapsed && "Ayuda"}
+
+        <button
+          onClick={() => setCollapsed(c => !c)}
+          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition"
+        >
+          {collapsed ? (
+            <PanelLeft className="w-5 h-5" />
+          ) : (
+            <PanelLeftClose className="w-5 h-5" />
+          )}
         </button>
+      </div>
+
+      {/* NAV */}
+      <nav className="flex-1 p-3 space-y-2">
+
+        <SidebarItem
+          collapsed={collapsed}
+          icon={<Home className="w-5 h-5" />}
+          label="Dashboard"
+          onClick={() => onNavigate("dashboard")}
+        />
+
+        <SidebarItem
+          collapsed={collapsed}
+          icon={<PackageSearch className="w-5 h-5" />}
+          label="Productos"
+          onClick={() => onNavigate("productos")}
+        />
+
+        <SidebarItem
+          collapsed={collapsed}
+          icon={<Boxes className="w-5 h-5" />}
+          label="Inventario"
+          onClick={() => onNavigate("inventario")}
+        />
+
+        <SidebarItem
+          collapsed={collapsed}
+          icon={<ShoppingCart className="w-5 h-5" />}
+          label="Ventas"
+          onClick={() => onNavigate("ventas")}
+        />
+
+        {role === "admin" && (
+          <SidebarItem
+            collapsed={collapsed}
+            icon={<Users className="w-5 h-5" />}
+            label="Usuarios"
+            onClick={() => onNavigate("usuarios")}
+          />
+        )}
+
+        <SidebarItem
+          collapsed={collapsed}
+          icon={<HelpCircle className="w-5 h-5" />}
+          label="Ayuda"
+          onClick={() => onNavigate("ayuda")}
+        />
+
+        <SidebarItem
+          collapsed={collapsed}
+          icon={<Settings className="w-5 h-5" />}
+          label="Configuración"
+          onClick={() => onNavigate("configuracion")}
+        />
+
       </nav>
-      <button className="sidebar-item logout" onClick={onLogout}>
-        <LogOut size={20}/> {!collapsed && "Logout"}
+
+      {/* LOGOUT */}
+      <button
+        className="
+          flex items-center gap-3 p-4 m-3
+          rounded-xl text-white/80
+          bg-white/5 border border-white/10
+          hover:bg-red-500/20 hover:text-white transition
+        "
+        onClick={onLogout}
+      >
+        <LogOut className="w-5 h-5" />
+        {!collapsed && "Logout"}
       </button>
     </aside>
+  );
+}
+
+function SidebarItem({ collapsed, icon, label, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="
+        w-full flex items-center gap-3 px-4 py-3
+        rounded-xl text-white/80
+        bg-white/0
+        hover:bg-white/10 transition
+      "
+    >
+      {icon}
+      {!collapsed && <span className="text-sm">{label}</span>}
+    </button>
   );
 }
