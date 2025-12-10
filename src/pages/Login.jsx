@@ -24,11 +24,13 @@ export default function Login({ onLogin, onShowRegister, onForgot }) {
     setTimeout(() => {
       const users = JSON.parse(localStorage.getItem("users") || "[]");
       const found = users.find(u => u.email === email && u.password === pass);
+
       if (found) {
         onLogin(found);
       } else {
         setError("Credenciales incorrectas.");
       }
+
       setLoading(false);
     }, 600);
   };
@@ -85,7 +87,9 @@ export default function Login({ onLogin, onShowRegister, onForgot }) {
           </div>
 
           <div className="aux-row">
-            <button className="link-btn small" type="button" onClick={handleForgot}>¿Olvidaste tu contraseña?</button>
+            <button className="link-btn small" type="button" onClick={handleForgot}>
+              ¿Olvidaste tu contraseña?
+            </button>
           </div>
         </div>
 
@@ -94,6 +98,7 @@ export default function Login({ onLogin, onShowRegister, onForgot }) {
         </button>
 
         {error && <div className="login-error">{error}</div>}
+
         <button className="link-btn" onClick={onShowRegister}>
           ¿No tienes cuenta? Regístrate aquí
         </button>

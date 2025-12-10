@@ -1,62 +1,65 @@
 import { useState, useEffect } from "react";
 import Layout from "./layout/Layout";
 import Auth from "./pages/Auth";
-import Register from "./pages/Register"; // ✔️ Te faltaba esto
+import Register from "./pages/Register";
 
 export default function App() {
-  // Estado del usuario logueado
+  // 1️⃣ TODOS LOS HOOKS VAN ARRIBA, SIEMPRE
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("user");
     return saved ? JSON.parse(saved) : null;
   });
 
-  // ✔️ ESTO NO EXISTÍA — lo creamos correctamente
   const [hasUsers, setHasUsers] = useState(false);
-
-  // Mostrar o no Registrar
   const [showRegister, setShowRegister] = useState(false);
 
+  // 2️⃣ SE PONEN LOS useEffect SIN NINGÚN RETURN ANTES
   useEffect(() => {
     const users = JSON.parse(localStorage.getItem("users") || "[]");
-    setHasUsers(users.length > 0); // ✔️ ahora sí existe
+    setHasUsers(users.length > 0);
 
-    // Inicializa el tema
     const theme = localStorage.getItem("theme") || "light";
-    localStorage.setItem("theme", theme);
     document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
   }, []);
 
-  // Si no hay usuarios registrados → mostrar registro
-  if (!hasUsers || showRegister) {
-    return (
-      <Register
-        onRegister={() => {
-          setHasUsers(true);
-          setShowRegister(false);
-        }}
-      />
-    );
-  }
-
-  // Guardar usuario en localStorage cuando cambie
   useEffect(() => {
     if (user) {
       localStorage.setItem("user", JSON.stringify(user));
     }
   }, [user]);
 
-  // Si NO hay sesión → mostrar Auth (login)
+  // 3️⃣ NUNCA RETORNES ANTES DE TODOS LOS HOOKS.
+  // El render CONDICIONAL solo después de definir hooks.
+
+  // 🔥 no hay usuarios → mostrar registro inicial
+  if (!hasUsers || showRegister) {
+    return (
+      <Register
+        onRegister={(newUser) => {
+          localStorage.setItem("user", JSON.stringify(newUser));
+          setUser(newUser);
+          setHasUsers(true);
+          setShowRegister(false);
+        }}
+        onCancel={() => setShowRegister(false)}
+      />
+    );
+  }
+
+  // 🔥 hay usuarios pero no sesión → mostrar login (Auth)
   if (!user) {
     return (
       <Auth
-        onLoginSuccess={(u) => {
-          setUser(u);
+        onLoginSuccess={(loggedUser) => {
+          localStorage.setItem("user", JSON.stringify(loggedUser));
+          setUser(loggedUser);
         }}
       />
     );
   }
 
-  // Si hay sesión → mostrar Dashboard/Layout
+  // 🔥 usuario logeado → layout principal
   return (
     <Layout
       user={user}

@@ -16,19 +16,20 @@ export default function Register({ onRegister, onCancel }) {
     if (/[A-Z]/.test(pass)) score++;
     if (/[0-9]/.test(pass)) score++;
     if (/[\W_]/.test(pass)) score++;
-    return score; // 0..4
+    return score;
   }, [pass]);
 
   const strengthLabel = ["Muy débil","Débil","Okay","Fuerte","Muy fuerte"][strength];
 
   const handle = () => {
     setError("");
+
     if (!email || !pass || !pass2) {
       setError("Completa todos los campos.");
       return;
     }
     if (!emailValid(email)) {
-      setError("Ingresa un email válido.");
+      setError("Email no válido.");
       return;
     }
     if (pass !== pass2) {
@@ -43,14 +44,22 @@ export default function Register({ onRegister, onCancel }) {
     setLoading(true);
     setTimeout(() => {
       const prevUsers = JSON.parse(localStorage.getItem("users") || "[]");
+
       if (prevUsers.some(u => u.email === email)) {
         setError("El email ya está registrado.");
         setLoading(false);
         return;
       }
-      const newUsers = [...prevUsers, { email, password: pass, role: "admin" }];
-      localStorage.setItem("users", JSON.stringify(newUsers));
 
+      const newUser = {
+        email,
+        password: pass,
+        role: "admin",
+      };
+
+      localStorage.setItem("users", JSON.stringify([...prevUsers, newUser]));
+
+      // Crear roles si no existen
       let roles = JSON.parse(localStorage.getItem("roles") || "[]");
       if (roles.length === 0) {
         roles = [
@@ -68,7 +77,7 @@ export default function Register({ onRegister, onCancel }) {
       }
 
       setLoading(false);
-      if (onRegister) onRegister();
+      onRegister(newUser);
     }, 700);
   };
 
@@ -85,7 +94,6 @@ export default function Register({ onRegister, onCancel }) {
               value={email}
               onChange={e => setEmail(e.target.value)}
               id="reg-email"
-              aria-invalid={!emailValid(email) && email !== ""}
               required
             />
             <label htmlFor="reg-email">Email</label>
@@ -101,16 +109,17 @@ export default function Register({ onRegister, onCancel }) {
               required
             />
             <label htmlFor="reg-pass">Contraseña</label>
+
             <button
               type="button"
               className="toggle-pass"
               onClick={() => setShowPass(!showPass)}
-              aria-label={showPass ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
               {showPass ? "🙈" : "👁️"}
             </button>
+
             <div className="password-strength">
-              <div className={`bar s-${strength}`} aria-hidden />
+              <div className={`bar s-${strength}`} />
               <small>{strengthLabel}</small>
             </div>
           </div>
@@ -129,14 +138,13 @@ export default function Register({ onRegister, onCancel }) {
         </div>
 
         <div className="actions-row">
-          <button className="primary" disabled={loading} onClick={handle}>{loading ? "Registrando..." : "Registrar"}</button>
+          <button className="primary" disabled={loading} onClick={handle}>
+            {loading ? "Registrando..." : "Registrar"}
+          </button>
           <button className="outline" onClick={onCancel}>Cancelar</button>
         </div>
 
         {error && <div className="register-error">{error}</div>}
-        <div className="register-info">
-          <small>Esta cuenta tendrá permisos de administrador.</small>
-        </div>
       </section>
     </div>
   );
