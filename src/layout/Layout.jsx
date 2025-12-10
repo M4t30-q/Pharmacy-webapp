@@ -2,8 +2,6 @@ import Sidebar from "../components/Sidebar";
 import ThemeToggle from "../components/ThemeToggle";
 import Dashboard from "../pages/Dashboard";
 import Inventario from "../pages/Inventario";
-import Login from "../pages/Login";
-import Register from "../pages/Register";
 import { useState } from "react";
 
 export default function Layout({ user, onLogout }) {
@@ -12,8 +10,7 @@ export default function Layout({ user, onLogout }) {
     dashboard: <Dashboard user={user} />,
     inventario: <Inventario user={user} />,
     login: <Login />,
-    register: <Register />,
-    ayuda: <Ayuda />,
+    register: <Register />
   };
 
   return (

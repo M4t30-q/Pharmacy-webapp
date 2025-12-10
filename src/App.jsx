@@ -1,27 +1,32 @@
 import { useState, useEffect } from "react";
 import Layout from "./layout/Layout";
 import Auth from "./pages/Auth";
+import Register from "./pages/Register"; // ✔️ Te faltaba esto
 
 export default function App() {
+  // Estado del usuario logueado
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("user");
     return saved ? JSON.parse(saved) : null;
   });
+
+  // ✔️ ESTO NO EXISTÍA — lo creamos correctamente
+  const [hasUsers, setHasUsers] = useState(false);
+
+  // Mostrar o no Registrar
   const [showRegister, setShowRegister] = useState(false);
 
   useEffect(() => {
     const users = JSON.parse(localStorage.getItem("users") || "[]");
-    setHasUsers(users.length > 0);
-    // Inicializa el tema si es necesario
-    if (!localStorage.getItem("theme")) {
-      localStorage.setItem("theme", "light");
-      document.documentElement.setAttribute("data-theme", "light");
-    } else {
-      document.documentElement.setAttribute("data-theme", localStorage.getItem("theme"));
-    }
+    setHasUsers(users.length > 0); // ✔️ ahora sí existe
+
+    // Inicializa el tema
+    const theme = localStorage.getItem("theme") || "light";
+    localStorage.setItem("theme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
   }, []);
 
-  // Debe mostrar primero register si no hay usuarios
+  // Si no hay usuarios registrados → mostrar registro
   if (!hasUsers || showRegister) {
     return (
       <Register
@@ -33,15 +38,14 @@ export default function App() {
     );
   }
 
-
+  // Guardar usuario en localStorage cuando cambie
   useEffect(() => {
-    // si el usuario cambia, lo guardamos
     if (user) {
       localStorage.setItem("user", JSON.stringify(user));
     }
   }, [user]);
 
-  // Si NO hay sesión → mostrar Auth (que maneja login/register)
+  // Si NO hay sesión → mostrar Auth (login)
   if (!user) {
     return (
       <Auth
@@ -52,7 +56,6 @@ export default function App() {
     );
   }
 
-  // Dashboard y Layout siempre reciben la prop user correcta
   // Si hay sesión → mostrar Dashboard/Layout
   return (
     <Layout
