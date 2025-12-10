@@ -7,7 +7,7 @@ import Configuracion from "../pages/Configuracion";
 import Productos from "../pages/Productos";
 import Ventas from "../pages/Ventas";
 import Usuarios from "../pages/Usuarios";
-
+import Ayuda from "../pages/Ayuda";  // ✅ ADD THIS
 
 export default function Layout({ user, onLogout }) {
   const [page, setPage] = useState("dashboard");
@@ -19,6 +19,7 @@ export default function Layout({ user, onLogout }) {
     ventas: <Ventas />,
     usuarios: <Usuarios />,
     configuracion: <Configuracion user={user} />,
+    ayuda: <Ayuda />,   // ✅ ADD THIS
   };
 
   return (

@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function Register({ onRegister, onCancel }) {
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [pass2, setPass2] = useState("");
@@ -24,8 +26,13 @@ export default function Register({ onRegister, onCancel }) {
   const handle = () => {
     setError("");
 
-    if (!email || !pass || !pass2) {
+    // VALIDATIONS
+    if (!username || !email || !pass || !pass2) {
       setError("Completa todos los campos.");
+      return;
+    }
+    if (username.length < 3) {
+      setError("El nombre de usuario debe tener al menos 3 caracteres.");
       return;
     }
     if (!emailValid(email)) {
@@ -41,17 +48,25 @@ export default function Register({ onRegister, onCancel }) {
       return;
     }
 
+    // PROCESS
     setLoading(true);
     setTimeout(() => {
       const prevUsers = JSON.parse(localStorage.getItem("users") || "[]");
 
-      if (prevUsers.some(u => u.email === email)) {
+      if (prevUsers.some((u) => u.email === email)) {
         setError("El email ya está registrado.");
         setLoading(false);
         return;
       }
 
+      if (prevUsers.some((u) => u.username === username)) {
+        setError("Ese nombre de usuario ya está en uso.");
+        setLoading(false);
+        return;
+      }
+
       const newUser = {
+        username,
         email,
         password: pass,
         role: "admin",
@@ -59,7 +74,7 @@ export default function Register({ onRegister, onCancel }) {
 
       localStorage.setItem("users", JSON.stringify([...prevUsers, newUser]));
 
-      // Crear roles si no existen
+      // CREATE DEFAULT ROLES IF NEEDED
       let roles = JSON.parse(localStorage.getItem("roles") || "[]");
       if (roles.length === 0) {
         roles = [
@@ -69,9 +84,9 @@ export default function Register({ onRegister, onCancel }) {
               "dashboard:view",
               "inventory:read",
               "inventory:write",
-              "roles:manage"
-            ]
-          }
+              "roles:manage",
+            ],
+          },
         ];
         localStorage.setItem("roles", JSON.stringify(roles));
       }
@@ -82,70 +97,88 @@ export default function Register({ onRegister, onCancel }) {
   };
 
   return (
-    <div className="centered-box-outer auth-inner">
-      <section className="centered-box auth-card-form register">
-        <h2>Crear cuenta administradora</h2>
+    <div className="auth-card-form register">
 
-        <div className="form-grid-single">
-          <div className="input-group">
-            <input
-              placeholder=" "
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              id="reg-email"
-              required
-            />
-            <label htmlFor="reg-email">Email</label>
-          </div>
+      <h2>Crear cuenta administradora</h2>
 
-          <div className="input-group password-wrapper">
-            <input
-              placeholder=" "
-              type={showPass ? "text" : "password"}
-              value={pass}
-              onChange={e => setPass(e.target.value)}
-              id="reg-pass"
-              required
-            />
-            <label htmlFor="reg-pass">Contraseña</label>
+      <div className="form-grid-single">
 
-            <button
-              type="button"
-              className="toggle-pass"
-              onClick={() => setShowPass(!showPass)}
-            >
-              {showPass ? "🙈" : "👁️"}
-            </button>
-
-            <div className="password-strength">
-              <div className={`bar s-${strength}`} />
-              <small>{strengthLabel}</small>
-            </div>
-          </div>
-
-          <div className="input-group">
-            <input
-              placeholder=" "
-              type={showPass ? "text" : "password"}
-              value={pass2}
-              onChange={e => setPass2(e.target.value)}
-              id="reg-pass2"
-              required
-            />
-            <label htmlFor="reg-pass2">Confirmar contraseña</label>
-          </div>
+        {/* USERNAME */}
+        <div className="input-group">
+          <input
+            placeholder=" "
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            id="reg-username"
+            required
+          />
+          <label htmlFor="reg-username">Nombre de usuario</label>
         </div>
 
-        <div className="actions-row">
-          <button className="primary" disabled={loading} onClick={handle}>
-            {loading ? "Registrando..." : "Registrar"}
+        {/* EMAIL */}
+        <div className="input-group">
+          <input
+            placeholder=" "
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            id="reg-email"
+            required
+          />
+          <label htmlFor="reg-email">Email</label>
+        </div>
+
+        {/* PASSWORD */}
+        <div className="input-group password-wrapper">
+          <input
+            placeholder=" "
+            type={showPass ? "text" : "password"}
+            value={pass}
+            onChange={(e) => setPass(e.target.value)}
+            id="reg-pass"
+            required
+          />
+          <label htmlFor="reg-pass">Contraseña</label>
+
+          <button
+            type="button"
+            className="toggle-pass"
+            onClick={() => setShowPass(!showPass)}
+          >
+            {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
-          <button className="outline" onClick={onCancel}>Cancelar</button>
+
+          <div className="password-strength">
+            <div className={`bar s-${strength}`} />
+            <small>{strengthLabel}</small>
+          </div>
         </div>
 
-        {error && <div className="register-error">{error}</div>}
-      </section>
+        {/* CONFIRM PASSWORD */}
+        <div className="input-group">
+          <input
+            placeholder=" "
+            type={showPass ? "text" : "password"}
+            value={pass2}
+            onChange={(e) => setPass2(e.target.value)}
+            id="reg-pass2"
+            required
+          />
+          <label htmlFor="reg-pass2">Confirmar contraseña</label>
+        </div>
+
+      </div>
+
+      {/* BUTTONS */}
+      <div className="actions-row">
+        <button className="primary" disabled={loading} onClick={handle}>
+          {loading ? "Registrando..." : "Registrar"}
+        </button>
+        <button className="outline" onClick={onCancel}>Cancelar</button>
+      </div>
+
+      {error && <div className="register-error">{error}</div>}
     </div>
   );
 }
