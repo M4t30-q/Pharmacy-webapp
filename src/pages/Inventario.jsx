@@ -1,120 +1,222 @@
-import { useState } from "react";
-import { Pencil, Trash2, Plus } from "lucide-react";
+// src/pages/Inventario.jsx
+import React, { useEffect, useState } from "react";
+import { Pencil, Trash2, Plus, Download, Upload } from "lucide-react";
+import Toast from "../components/Toast";
+import { supabase } from "../lib/supabaseClient";
+import {
+  fetchProducts,
+  uploadImage,
+  getSignedUrl,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from "../lib/products";
 
-const inventarioInicial = [
-  { id: 1, nombre: "Paracetamol", cantidad: 13, categoria: "Analgesico" },
-  { id: 2, nombre: "Amoxicilina", cantidad: 6, categoria: "Antibiótico" },
-  { id: 3, nombre: "Ibuprofeno", cantidad: 24, categoria: "Antiinflamatorio" },
-];
 
-export default function Inventario() {
-  const [productos, setProductos] = useState(inventarioInicial);
-  const [filtro, setFiltro] = useState("");
+export default function Inventario({ user }) {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Form state
-  const [editing, setEditing] = useState(null); // product or null
-  const [form, setForm] = useState({ nombre: "", cantidad: "", categoria: "" });
+  // form
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name: "", quantity: 0, imagePath: null });
+  const [file, setFile] = useState(null);
 
-  const productosFiltrados = productos.filter(p =>
-    p.nombre.toLowerCase().includes(filtro.toLowerCase())
-  );
+  const [filter, setFilter] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("Todas");
 
-  // Handle input changes
-  const updateForm = (field, val) =>
-    setForm((prev) => ({ ...prev, [field]: val }));
+  const [toast, setToast] = useState("");
 
-  // Add or Save edit
-  const guardarProducto = () => {
-    if (!form.nombre || !form.cantidad || !form.categoria) return;
+  useEffect(() => {
+    load();
+  }, []);
 
-    if (editing) {
-      // Editing existing product
-      setProductos((prev) =>
-        prev.map((p) =>
-          p.id === editing.id ? { ...p, ...form } : p
-        )
+  async function load() {
+    setLoading(true);
+    const { data } = await fetchProducts();
+    if (data) {
+      // attach signed urls for images
+      const withUrls = await Promise.all(
+        data.map(async (p) => {
+          const url = p.image_path ? await getSignedUrl(p.image_path) : null;
+          return { ...p, imageUrl: url };
+        })
       );
+      setProducts(withUrls);
     } else {
-      // Adding new product
-      const nuevo = {
-        id: Date.now(),
-        nombre: form.nombre,
-        cantidad: Number(form.cantidad),
-        categoria: form.categoria,
-      };
-      setProductos((prev) => [...prev, nuevo]);
+      setProducts([]);
     }
+    setLoading(false);
+  }
 
-    limpiarForm();
-  };
-
-  const limpiarForm = () => {
-    setForm({ nombre: "", cantidad: "", categoria: "" });
+  function resetForm() {
+    setForm({ name: "", quantity: 0, imagePath: null });
+    setFile(null);
     setEditing(null);
-  };
+  }
 
-  const eliminarProducto = (id) => {
-    setProductos((prev) => prev.filter((p) => p.id !== id));
-  };
+  async function handleFile(file) {
+    if (!file) return;
+    setToast("Subiendo imagen...");
+    try {
+      const path = await uploadImage(file); // returns path in bucket
+      setForm((f) => ({ ...f, imagePath: path }));
+      setToast("Imagen subida. Guarda el producto para persistir.");
+    } catch (err) {
+      console.error(err);
+      setToast("Error subiendo imagen");
+    }
+  }
 
-  const comenzarEdicion = (producto) => {
-    setEditing(producto);
-    setForm({
-      nombre: producto.nombre,
-      cantidad: producto.cantidad,
-      categoria: producto.categoria,
-    });
-  };
+  async function handleSave() {
+    if (!form.name) {
+      setToast("Nombre requerido");
+      return;
+    }
+    if (editing) {
+      await updateProduct(editing.id, {
+        name: form.name,
+        quantity: Number(form.quantity),
+        image_path: form.imagePath,
+      });
+      setToast("Producto actualizado");
+    } else {
+      await createProduct({
+        name: form.name,
+        quantity: Number(form.quantity),
+        image_path: form.imagePath,
+        created_by: user?.id ?? null,
+      });
+      setToast("Producto creado");
+    }
+    resetForm();
+    await load();
+  }
+
+  function startEdit(p) {
+    setEditing(p);
+    setForm({ name: p.name, quantity: p.quantity, imagePath: p.image_path });
+    setFile(null);
+  }
+
+  async function handleDelete(id) {
+    if (!confirm("Eliminar producto?")) return;
+    await deleteProduct(id);
+    setToast("Producto eliminado");
+    await load();
+  }
+
+  function stockBadge(qty) {
+    if (qty <= 5) return <span className="text-red-500 font-semibold">CRÍTICO</span>;
+    if (qty <= 10) return <span className="text-amber-400 font-medium">BAJO</span>;
+    return null;
+  }
+
+  // small export JSON
+  function exportJSON() {
+    const data = products.map((p) => ({
+      name: p.name,
+      quantity: p.quantity,
+      image_path: p.image_path || null,
+    }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "inventario_export.json";
+    a.click();
+    setToast("Exportado");
+  }
+
+  // import JSON file (client side)
+  function importJSON(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const json = JSON.parse(ev.target.result);
+        for (const p of json) {
+          await createProduct({
+            name: p.name,
+            quantity: Number(p.quantity || 0),
+            image_path: p.image_path || null,
+            created_by: user?.id ?? null,
+          });
+        }
+        setToast("Importado");
+        await load();
+      } catch (err) {
+        console.error(err);
+        setToast("Archivo inválido");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  const filtered = products.filter((p) =>
+    p.name.toLowerCase().includes(filter.toLowerCase())
+  );
 
   return (
     <section className="w-full px-6 md:px-10 py-10 text-white/90">
-
-      {/* TITLE */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-semibold tracking-tight">Inventario</h1>
 
-        <button
-          onClick={guardarProducto}
-          className="
-            flex items-center gap-2 px-4 py-2 rounded-xl
-            bg-white/10 hover:bg-white/20
-            border border-white/10
-            transition
-          "
-        >
-          <Plus size={18} />
-          {editing ? "Guardar cambios" : "Añadir producto"}
-        </button>
+        <div className="flex gap-3">
+          <label className="px-3 py-2 rounded-xl bg-white/10 border border-white/10 cursor-pointer">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFile(e.target.files[0])}
+            />
+            Subir imagen
+          </label>
+
+          <button
+            onClick={handleSave}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition"
+          >
+            <Plus size={16} />
+            {editing ? "Guardar cambios" : "Añadir producto"}
+          </button>
+
+          <button
+            onClick={exportJSON}
+            className="px-3 py-2 rounded-xl bg-white/5 border border-white/10"
+          >
+            <Download size={16} />
+          </button>
+
+          <label className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 cursor-pointer">
+            <input
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => importJSON(e.target.files[0])}
+            />
+            <Upload size={16} />
+          </label>
+        </div>
       </div>
 
       {/* FORM */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <input
-          type="text"
           placeholder="Nombre"
-          value={form.nombre}
-          onChange={(e) => updateForm("nombre", e.target.value)}
-          className="px-4 py-3 rounded-xl bg-white/5 border border-white/15
-                     text-white/90 focus:ring-2 focus:ring-white/20 outline-none"
+          value={form.name}
+          onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
+          className="px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-white/90"
         />
-
         <input
-          type="number"
           placeholder="Cantidad"
-          value={form.cantidad}
-          onChange={(e) => updateForm("cantidad", e.target.value)}
-          className="px-4 py-3 rounded-xl bg-white/5 border border-white/15
-                     text-white/90 focus:ring-2 focus:ring-white/20 outline-none"
+          type="number"
+          value={form.quantity}
+          onChange={(e) => setForm((s) => ({ ...s, quantity: e.target.value }))}
+          className="px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-white/90"
         />
-
-        <input
-          type="text"
-          placeholder="Categoría"
-          value={form.categoria}
-          onChange={(e) => updateForm("categoria", e.target.value)}
-          className="px-4 py-3 rounded-xl bg-white/5 border border-white/15
-                     text-white/90 focus:ring-2 focus:ring-white/20 outline-none"
-        />
+        <div className="flex items-center gap-3">
+          {form.imagePath ? <span className="text-sm text-white/70">Imagen lista</span> : <span className="text-sm text-white/50">Sin imagen</span>}
+        </div>
       </div>
 
       {/* SEARCH */}
@@ -122,69 +224,48 @@ export default function Inventario() {
         <label className="block text-sm text-white/60 mb-2">Buscar producto</label>
         <input
           type="text"
-          value={filtro}
-          onChange={e => setFiltro(e.target.value)}
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
           placeholder="Paracetamol, ibuprofeno..."
-          className="
-            w-full px-4 py-3 
-            bg-white/5 border border-white/15 rounded-xl 
-            text-white/90 focus:ring-2 focus:ring-white/20 outline-none
-          "
+          className="w-full px-4 py-3 bg-white/5 border border-white/15 rounded-xl text-white/90"
         />
       </div>
 
-      {/* TABLE */}
-      <div className="overflow-x-auto backdrop-blur-xl bg-white/5
-                      border border-white/15 rounded-2xl shadow-xl p-6">
+      {/* GRID */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading && <div>Loading...</div>}
+        {!loading && filtered.length === 0 && <div className="text-white/60">No hay productos</div>}
 
-        <table className="w-full text-left">
-          <thead className="text-white/70 text-sm border-b border-white/10">
-            <tr>
-              <th className="py-3">Nombre</th>
-              <th className="py-3">Cantidad</th>
-              <th className="py-3">Categoría</th>
-              <th className="py-3">Acciones</th>
-            </tr>
-          </thead>
+        {!loading &&
+          filtered.map((p) => (
+            <div key={p.id} className="p-4 rounded-2xl bg-white/5 border border-white/10">
+              <div className="flex gap-3">
+                <div className="w-16 h-16 rounded-md bg-white/7 overflow-hidden">
+                  {p.imageUrl ? (
+                    <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="p-3 text-white/50">No img</div>
+                  )}
+                </div>
 
-          <tbody className="text-white/80">
-            {productosFiltrados.length === 0 && (
-              <tr>
-                <td colSpan={4} className="py-6 text-center text-white/50 text-sm">
-                  No hay productos que coincidan.
-                </td>
-              </tr>
-            )}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">{p.name}</h3>
+                    <div className="ml-auto text-sm">{stockBadge(p.quantity)}</div>
+                  </div>
+                  <div className="text-white/70 text-sm">Cantidad: <strong>{p.quantity}</strong></div>
+                </div>
 
-            {productosFiltrados.map(producto => (
-              <tr key={producto.id}
-                  className="border-b border-white/5 hover:bg-white/5 transition">
-                
-                <td className="py-3">{producto.nombre}</td>
-                <td className="py-3">{producto.cantidad}</td>
-                <td className="py-3">{producto.categoria}</td>
-
-                <td className="py-3 flex items-center gap-3">
-                  <button
-                    onClick={() => comenzarEdicion(producto)}
-                    className="text-blue-300 hover:text-blue-400"
-                  >
-                    <Pencil size={18} />
-                  </button>
-
-                  <button
-                    onClick={() => eliminarProducto(producto.id)}
-                    className="text-red-300 hover:text-red-400"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </td>
-
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                <div className="flex flex-col gap-2">
+                  <button onClick={() => startEdit(p)} className="text-blue-300 hover:text-blue-400"><Pencil size={18} /></button>
+                  <button onClick={() => handleDelete(p.id)} className="text-red-300 hover:text-red-400"><Trash2 size={18} /></button>
+                </div>
+              </div>
+            </div>
+          ))}
       </div>
+
+      {toast && <Toast text={toast} onClose={() => setToast("")} />}
     </section>
   );
 }

@@ -1,16 +1,17 @@
 import React, { useState, useMemo } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Register({ onRegister, onCancel }) {
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [pass, setPass] = useState("");
   const [pass2, setPass2] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  const emailValid = (v) => /\S+@\S+\.\S+/.test(v);
+  const emailValid = v => /\S+@\S+\.\S+/.test(v);
 
   const strength = useMemo(() => {
     let score = 0;
@@ -23,82 +24,57 @@ export default function Register({ onRegister, onCancel }) {
 
   const strengthLabel = ["Muy débil","Débil","Okay","Fuerte","Muy fuerte"][strength];
 
-  const handle = () => {
+  async function handleRegister() {
     setError("");
 
-    // VALIDATIONS
-    if (!username || !email || !pass || !pass2) {
-      setError("Completa todos los campos.");
-      return;
-    }
-    if (username.length < 3) {
-      setError("El nombre de usuario debe tener al menos 3 caracteres.");
-      return;
+    if (!email || !username || !pass || !pass2) {
+      return setError("Completa todos los campos.");
     }
     if (!emailValid(email)) {
-      setError("Email no válido.");
-      return;
+      return setError("Email no válido.");
     }
     if (pass !== pass2) {
-      setError("Las contraseñas no coinciden.");
-      return;
+      return setError("Las contraseñas no coinciden.");
     }
     if (pass.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
-      return;
+      return setError("La contraseña debe tener al menos 6 caracteres.");
     }
 
-    // PROCESS
     setLoading(true);
-    setTimeout(() => {
-      const prevUsers = JSON.parse(localStorage.getItem("users") || "[]");
 
-      if (prevUsers.some((u) => u.email === email)) {
-        setError("El email ya está registrado.");
-        setLoading(false);
-        return;
-      }
+    // 1) Create auth user
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password: pass,
+    });
 
-      if (prevUsers.some((u) => u.username === username)) {
-        setError("Ese nombre de usuario ya está en uso.");
-        setLoading(false);
-        return;
-      }
-
-      const newUser = {
-        username,
-        email,
-        password: pass,
-        role: "admin",
-      };
-
-      localStorage.setItem("users", JSON.stringify([...prevUsers, newUser]));
-
-      // CREATE DEFAULT ROLES IF NEEDED
-      let roles = JSON.parse(localStorage.getItem("roles") || "[]");
-      if (roles.length === 0) {
-        roles = [
-          {
-            name: "admin",
-            permissions: [
-              "dashboard:view",
-              "inventory:read",
-              "inventory:write",
-              "roles:manage",
-            ],
-          },
-        ];
-        localStorage.setItem("roles", JSON.stringify(roles));
-      }
-
+    if (authError) {
       setLoading(false);
-      onRegister(newUser);
-    }, 700);
-  };
+      return setError(authError.message);
+    }
+
+    // 2) Insert profile
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .insert({
+        id: authData.user.id,
+        email,
+        username,
+        role: "admin",
+      });
+
+    setLoading(false);
+
+    if (profileError) {
+      console.error(profileError);
+      return setError("Error creando el perfil.");
+    }
+
+    onRegister(authData.user);
+  }
 
   return (
     <div className="auth-card-form register">
-
       <h2>Crear cuenta administradora</h2>
 
       <div className="form-grid-single">
@@ -107,9 +83,8 @@ export default function Register({ onRegister, onCancel }) {
         <div className="input-group">
           <input
             placeholder=" "
-            type="text"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={e => setUsername(e.target.value)}
             id="reg-username"
             required
           />
@@ -122,7 +97,7 @@ export default function Register({ onRegister, onCancel }) {
             placeholder=" "
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={e => setEmail(e.target.value)}
             id="reg-email"
             required
           />
@@ -135,17 +110,17 @@ export default function Register({ onRegister, onCancel }) {
             placeholder=" "
             type={showPass ? "text" : "password"}
             value={pass}
-            onChange={(e) => setPass(e.target.value)}
+            onChange={e => setPass(e.target.value)}
             id="reg-pass"
             required
           />
           <label htmlFor="reg-pass">Contraseña</label>
 
           <button
-            type="button"
-            className="toggle-pass"
-            onClick={() => setShowPass(!showPass)}
-          >
+             type="button"
+             className="toggle-pass"
+             onClick={() => setShowPass(!showPass)}
+           >
             {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
 
@@ -155,26 +130,25 @@ export default function Register({ onRegister, onCancel }) {
           </div>
         </div>
 
-        {/* CONFIRM PASSWORD */}
+        {/* PASSWORD 2 */}
         <div className="input-group">
           <input
             placeholder=" "
             type={showPass ? "text" : "password"}
             value={pass2}
-            onChange={(e) => setPass2(e.target.value)}
+            onChange={e => setPass2(e.target.value)}
             id="reg-pass2"
             required
           />
           <label htmlFor="reg-pass2">Confirmar contraseña</label>
         </div>
-
       </div>
 
-      {/* BUTTONS */}
       <div className="actions-row">
-        <button className="primary" disabled={loading} onClick={handle}>
+        <button className="primary" disabled={loading} onClick={handleRegister}>
           {loading ? "Registrando..." : "Registrar"}
         </button>
+
         <button className="outline" onClick={onCancel}>Cancelar</button>
       </div>
 
